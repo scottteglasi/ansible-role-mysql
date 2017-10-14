@@ -4,6 +4,13 @@
   register: mysql_cli_version
   changed_when: false
 
+# CONTINUE HERE - Use this conditionally or set a variable with the -p parameter so 
+# it can easily be dropped in a mysql command
+# 
+- name: If needed, extract the temporary root password from the mysql log.
+  command: "password=$(cat /var/log/mysqld.log | grep 'A temporary password is generated for' | tail -1 | sed -n 's/.*root@localhost: //p')"
+  register: mysql_temp_root_password
+  
 - name: Ensure default user is present.
   mysql_user:
     name: "{{ mysql_user_name }}"

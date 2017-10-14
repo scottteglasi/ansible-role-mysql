@@ -142,6 +142,30 @@ If you want to install MySQL from the official repository instead of installing 
       when: ansible_os_family == "RedHat"
 ```
 
+#### Installing MySQL Community Edition 5.7+ on CentOS
+
+MySQL Community Edition installations now generate a temporary root password for MySQL and write that password into the mysql error log.  In this case, make sure to pass the following flag in your `set_fact:` block, as well as use the different package names.  
+
+```yaml
+  pre_tasks:
+    - name: Install the MySQL repo.
+      yum:
+        name: http://repo.mysql.com/mysql-community-release-el7-5.noarch.rpm
+        state: present
+      when: ansible_os_family == "RedHat"
+  
+    - name: Override variables for MySQL (RedHat).
+      set_fact:
+        mysql_daemon: mysqld
+        mysql_packages: ['mysql-community-server', 'mysql-community-client']
+        mysql_log_error: /var/log/mysqld.err
+        mysql_syslog_tag: mysqld
+        mysql_pid_file: /var/run/mysqld/mysqld.pid
+        mysql_socket: /var/lib/mysql/mysql.sock
+        mysql_get_temporary_root_password: true 
+      when: ansible_os_family == "RedHat"        
+```
+
 ### MariaDB usage
 
 This role works with either MySQL or a compatible version of MariaDB. On RHEL/CentOS 7+, the mariadb database engine was substituted as the default MySQL replacement package. No modifications are necessary though all of the variables still reference 'mysql' instead of mariadb.
