@@ -144,7 +144,12 @@ If you want to install MySQL from the official repository instead of installing 
 
 #### Installing MySQL Community Edition 5.7+ on CentOS
 
-MySQL Community Edition installations now generate a temporary root password for MySQL and write that password into the mysql error log.  In this case, make sure to pass the following flag in your `set_fact:` block, as well as use the different package names.  
+MySQL Community Edition installations now generate a temporary root password for MySQL and write that password into the mysql error log.  In this case, make sure to pass the following vars in: 
+
+* `mysql_packages: [ 'mysql-community-server', 'mysql-community-client' ]`
+* `mysql_get_temporary_root_password: true`
+
+Here's a complete setup of pre-tasks for MySQL Community Edition:
 
 ```yaml
   pre_tasks:

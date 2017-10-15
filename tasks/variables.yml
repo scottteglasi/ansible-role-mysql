@@ -61,3 +61,7 @@
   set_fact:
     mysql_supports_innodb_large_prefix: "{{ __mysql_supports_innodb_large_prefix }}"
   when: mysql_supports_innodb_large_prefix is not defined
+
+- name: Define temp root password param so it's available regardless if it's empty
+  set_fact:
+    mysql_temp_root_password_param: ""
