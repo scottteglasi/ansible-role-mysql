@@ -4,18 +4,36 @@
   register: mysql_cli_version
   changed_when: false
 
+- name: See if root password needs to be reset from temporary
+  stat:
+    path: "{{ mysql_root_home }}/.my.cnf"
+  register: root_my_cnf_file
+
 - name: If needed, extract the temporary root password from the mysql log.
   shell: "cat /var/log/mysql.err | grep 'A temporary password is generated for' | tail -1 | sed -n 's/.*root@localhost: //p'"
   register: mysql_temp_root_password
-  when: mysql_get_temporary_root_password
+  when: mysql_get_temporary_root_password and root_my_cnf_file is not defined
 
 - name: Configure password parameter var if password was taken from mysql log.
   set_fact:
     mysql_temp_root_password_param: "-p{{ mysql_temp_root_password.stdout }}"
-  when: mysql_temp_root_password
+  when: mysql_temp_root_password and root_my_cnf_file is not defined
 
 ## CONTINUE HERE - set a new root password so we're configured and ready to go.
 ## We can't do anything with the temporary password as it's set to expire. 
+- name: Set the root password so that it's no longer expired, and we can use MySQL.
+  shell: mysql -uroot {{ mysql_temp_root_password_param }} --connect-expired-password -e "SET PASSWORD = '{{ mysql_root_password }}'"
+  when: mysql_temp_root_password and root_my_cnf_file is not defined
+  
+# Running this task to save root password if it was updated by the task above. 
+- name: Copy .my.cnf file with root password credentials.
+  template:
+    src: "root-my.cnf.j2"
+    dest: "{{ mysql_root_home }}/.my.cnf"
+    owner: root
+    group: root
+    mode: 0600
+  when: root_my_cnf_file is not defined
 
 - name: Ensure default user is present.
   mysql_user:
@@ -36,13 +54,13 @@
   when: mysql_user_name != mysql_root_username and (mysql_install_packages | bool or mysql_user_password_update)
 
 - name: Disallow root login remotely
-  command: 'mysql {{ mysql_temp_root_password_param }} -NBe "{{ item }}"'
+  command: 'mysql -NBe "{{ item }}"'
   with_items:
     - DELETE FROM mysql.user WHERE User='{{ mysql_root_username }}' AND Host NOT IN ('localhost', '127.0.0.1', '::1')
   changed_when: false
 
 - name: Get list of hosts for the root user.
-  command: mysql {{ mysql_temp_root_password_param }} -NBe "SELECT Host FROM mysql.user WHERE User = '{{ mysql_root_username }}' ORDER BY (Host='localhost') ASC"
+  command: mysql -NBe "SELECT Host FROM mysql.user WHERE User = '{{ mysql_root_username }}' ORDER BY (Host='localhost') ASC"
   register: mysql_root_hosts
   changed_when: false
   check_mode: no
@@ -53,7 +71,7 @@
 # Set root password for MySQL >= 5.7.x.
 - name: Update MySQL root password for localhost root account (5.7.x).
   shell: >
-    mysql -u root {{ mysql_temp_root_password_param }} -NBe
+    mysql -u root -NBe
     'ALTER USER "{{ mysql_root_username }}"@"{{ item }}" IDENTIFIED WITH mysql_native_password BY "{{ mysql_root_password }}";'
   with_items: "{{ mysql_root_hosts.stdout_lines|default([]) }}"
   when: ((mysql_install_packages | bool) or mysql_root_password_update) and ('5.7.' in mysql_cli_version.stdout)
