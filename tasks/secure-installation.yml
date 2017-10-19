@@ -8,8 +8,13 @@
 # it can easily be dropped in a mysql command
 # 
 - name: If needed, extract the temporary root password from the mysql log.
-  command: "echo $(cat /var/log/mysql.err | grep 'A temporary password is generated for' | tail -1 | sed -n 's/.*root@localhost: //p')"
+  shell: "cat /var/log/mysql.err | grep 'A temporary password is generated for' | tail -1 | sed -n 's/.*root@localhost: //p'"
   register: mysql_temp_root_password
+  when: mysql_get_temporary_root_password
+
+- name: Contents of get temp root pass
+  debug: 
+    var: mysql_temp_root_password
   when: mysql_get_temporary_root_password
 
 - name: Configure password parameter var if password was taken from mysql log.
