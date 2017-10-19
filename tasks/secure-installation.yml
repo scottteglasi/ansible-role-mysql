@@ -12,14 +12,9 @@
   register: mysql_temp_root_password
   when: mysql_get_temporary_root_password
 
-- name: Contents of get temp root pass
-  debug: 
-    var: mysql_temp_root_password
-  when: mysql_get_temporary_root_password
-
 - name: Configure password parameter var if password was taken from mysql log.
   set_fact:
-    mysql_temp_root_password_param: "-p{{ mysql_temp_root_password }}"
+    mysql_temp_root_password_param: "-p{{ mysql_temp_root_password.stdout }}"
   when: mysql_temp_root_password
 
 - name: Ensure default user is present.
