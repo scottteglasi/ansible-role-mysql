@@ -12,18 +12,16 @@
 - name: If needed, extract the temporary root password from the mysql log.
   shell: "cat /var/log/mysql.err | grep 'A temporary password is generated for' | tail -1 | sed -n 's/.*root@localhost: //p'"
   register: mysql_temp_root_password
-  when: mysql_get_temporary_root_password and root_my_cnf_file is not defined
+  when: mysql_get_temporary_root_password and root_my_cnf_file.stat.exists == false
 
 - name: Configure password parameter var if password was taken from mysql log.
   set_fact:
     mysql_temp_root_password_param: "-p{{ mysql_temp_root_password.stdout }}"
-  when: mysql_temp_root_password and root_my_cnf_file is not defined
+  when: mysql_get_temporary_root_password and root_my_cnf_file.stat.exists == false
 
-## CONTINUE HERE - set a new root password so we're configured and ready to go.
-## We can't do anything with the temporary password as it's set to expire. 
 - name: Set the root password so that it's no longer expired, and we can use MySQL.
   shell: mysql -uroot {{ mysql_temp_root_password_param }} --connect-expired-password -e "SET PASSWORD = '{{ mysql_root_password }}'"
-  when: mysql_temp_root_password and root_my_cnf_file is not defined
+  when: mysql_get_temporary_root_password and root_my_cnf_file.stat.exists == false
   
 # Running this task to save root password if it was updated by the task above. 
 - name: Copy .my.cnf file with root password credentials.
@@ -33,7 +31,7 @@
     owner: root
     group: root
     mode: 0600
-  when: root_my_cnf_file is not defined
+  when: root_my_cnf_file.stat.exists == false
 
 - name: Ensure default user is present.
   mysql_user:
