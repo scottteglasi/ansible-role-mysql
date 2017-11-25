@@ -16,7 +16,7 @@
 
 - name: Configure password parameter var if password was taken from mysql log.
   set_fact:
-    mysql_temp_root_password_param: "-p{{ mysql_temp_root_password.stdout }}"
+    mysql_temp_root_password_param: "-p\"{{ mysql_temp_root_password.stdout }}\""
   when: mysql_get_temporary_root_password and root_my_cnf_file.stat.exists == false
 
 - name: Set the root password so that it's no longer expired, and we can use MySQL.
